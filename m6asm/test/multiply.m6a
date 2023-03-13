@@ -1,0 +1,14 @@
+.equ ZC 0x0a
+
+lda i (0)
+ldb i (5)
+ldx i (4)
+
+Loop:
+lda + (0) [BX]
+dex
+scf i (ZC)
+jcc i (Loop)
+
+Halt:
+jmp i (Halt)

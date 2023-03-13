@@ -1,0 +1,18 @@
+.org 0x0000
+.equ ZS 0x08
+ldx i (Text)
+
+Loop:
+lar i (0) [BX]
+scf i (ZS)
+jcc i (Halt)
+ldm a (0xff) [I]
+inx
+jmp i (Loop)
+
+Halt:
+jmp i (Halt)
+
+.org 0x0200
+Text:
+.db "Hello World from the assembler!\nNow it can handle ,.\"\\ and the other stuff\n", 0x00

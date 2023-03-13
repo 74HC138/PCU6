@@ -33,13 +33,19 @@ Included in this repo is a very rudimentary assembler that can assemble PCU6 ass
 The first field is the opcode, then the source, followed by the imidiate value and last of all the BX/I flag.
 
 As an example:
+
 ```ldm a (0xff) [I]```
+
 This instruction loads the register A into work memory at address 0xff.
+
 ```ldm a (0xff) [BX]```
+
 While this instruction load the register A into work memory at the index X.
 
 The assembler can also handle labels. These are indicated by a trailing `:`.
+
 As an example:
+
 ```Loop:```
 
 Also there are constants using the `.equ` command, origin address with `.org` and data using `.db`.

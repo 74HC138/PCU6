@@ -1,0 +1,28 @@
+.equ SHIFT_IN 0xf0
+.equ SHIFT_RIGHT 0xf0
+.equ SHIFT_LEFT 0xf1
+
+.equ ZS 0x08
+.equ ZC 0x0a
+.equ SFS 0x20
+.equ SFC 0x30
+
+.org 0x00
+lda i (0x9b)
+ldx i (0xff)
+
+Shift:
+ldm a (SHIFT_IN) [I]
+scf i (0x00)
+lda m (SHIFT_RIGHT) [I]
+scf i (SFS)
+jcc i (One)
+jmp i (Zero)
+
+One:
+ldm i ('1') [BX]
+jmp i (Shift)
+
+Zero:
+ldm i ('0') [BX]
+jmp i (Shift)

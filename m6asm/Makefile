@@ -8,9 +8,9 @@ SOURCES := $(wildcard $(SRCDIR)/*.c)
 OBJECTS := $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TARGET = $(BUILDDIR)/m6asm
 
-.PHONY: all clean
+.PHONY: all copy clean
 
-all: $(TARGET)
+all: $(TARGET) copy
 
 $(TARGET): $(OBJECTS)
 	$(CC) $^ -o $@
@@ -20,6 +20,9 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(BUILDDIR)
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
+
+copy:
+	cp $(TARGET) .
 
 clean:
 	rm -rf $(BUILDDIR)

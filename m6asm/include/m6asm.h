@@ -7,6 +7,40 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdarg.h>
+
+char* Command[] = {
+    "-i",
+    "--input",
+    "-o",
+    "--output",
+    "-l",
+    "--listing",
+    "-ih",
+    "--ihex",
+    "-b",
+    "--bin",
+    "-h",
+    "--hex",
+    "--help",
+    "-v",
+    "--verbose",
+    "-d",
+    "--debug",
+    "-n",
+    "--noColor",
+    "-s",
+    "--silent",
+    "-fs",
+    "--forceSilent",
+    NULL
+};
+
+enum FileType {
+    ihex,
+    hex,
+    bin
+};
 
 char* OpcodeName[] = {
     "lda",
@@ -81,11 +115,29 @@ struct Constant {
     struct Constant* nextConst;
 };
 
+enum LogType {
+    normal,
+    info,
+    debug,
+    error
+};
+
+enum LogLevel {
+    ForceSilent = -2,
+    Silent = -1,
+    Normal = 0,
+    Verbose = 1,
+    Debug = 2
+};
+
+void logMessage(enum LogLevel level, enum LogType type, const char* format, ...);
+void displayHelp();
+int getIndex(char* str, char** tokenList, int listLen);
 char* getToken(const char* str, int n);
 int findConstant(char* name, int* value);
 uint16_t toOpcode(struct Instruction instr);
 char getLastChar(char* str, int* length);
-int assemble(int pass);
+int assemble(int pass, FILE* src, int startAdr, FILE* listing);
 int handleDb(char *input_string, int index, unsigned char *memory);
 
 #endif

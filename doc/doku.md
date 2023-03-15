@@ -48,6 +48,8 @@ CC bits:
 	1: Invert Zerro
 	2: Include Carry
 	3: Include Zero
+	4: Invert Shift Flag
+	5: Include Shift Flag
 	
 ##Programs
 

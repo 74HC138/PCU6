@@ -1,41 +1,143 @@
 #include "m6asm.h"
 
 uint8_t memory[1024];
-uint16_t* mem16 = (uint16_t*) memory;
 
 char* sourceFile;
 char* outputFile;
+char* listFile;
 FILE* source;
 FILE* output;
+FILE* list;
 struct Constant* constants;
+enum FileType fileType;
 
+enum LogLevel logLevel = Normal;
+int useColor = 1;
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        printf("Not enough arguments!\n");
-        printf("Usage:\n");
-        printf("m6asm [source] [destination]\n");
+    
+    int len = 0;
+    while (Command[len] != NULL) len++;
+
+    fileType = bin;
+
+    for (int i = 1; i < argc; i++) {
+        switch(getIndex(argv[i], Command, len)) {
+            case 0:
+            case 1:
+                //set input file
+                i++;
+                if (i >= argc) {
+                    printf("Parameter error!\n");
+                    return -1;
+                }
+                sourceFile = argv[i];
+                break;
+            case 2:
+            case 3:
+                //set output file
+                i++;
+                if (i >= argc) {
+                    printf("Parameter error!\n");
+                    return -1;
+                }
+                outputFile = argv[i];
+                break;
+            case 4:
+            case 5:
+                //set list file
+                i++;
+                if (i >= argc) {
+                    printf("Parameter error!\n");
+                    return -1;
+                }
+                listFile = argv[i];
+                break;
+            case 6:
+            case 7:
+                fileType = ihex;
+                break;
+            case 8:
+            case 9:
+                fileType = bin;
+                break;
+            case 10:
+            case 11:
+                fileType = hex;
+                break;
+            case 12:
+                displayHelp();
+                return 0;
+            case 13:
+            case 14:
+                logLevel = Verbose;
+                break;
+            case 15:
+            case 16:
+                logLevel = Debug;
+                break;
+            case 17:
+            case 18:
+                useColor = 0;
+                break;
+            case 19:
+            case 20:
+                logLevel = Silent;
+                break;
+            case 21:
+            case 22:
+                logLevel = ForceSilent;
+                break;
+            default:
+                printf("Parameter error! Command %s not recognised.\n", argv[i]);
+                return -1;
+                break;
+        }
+    }
+
+    if (sourceFile == NULL) {
+        logMessage(Normal, error, "No input file given!\n");
         return -1;
     }
-    sourceFile = argv[1];
-    outputFile = argv[2];
 
     source = fopen(sourceFile, "r");
     if (!source) {
-        printf("Cant open source file!\n");
+        logMessage(Normal, error, "Cant open source file!\n");
         return -1;
     }
 
-    printf("Pass 1\n");
-    if (assemble(0) != 0) return -1;
-    fseek(source, 0, SEEK_SET);
-    printf("Pass 2\n");
-    if (assemble(1) != 0) return -1;
-    printf("Finished assembling\n");
+    if (listFile != NULL) {
+        list = fopen(listFile, "w");
+        logMessage(Debug, debug, "[Dbug] Opened List file\n");
+    } else {
+        list = NULL;
+    }
 
-    if (argc > 3) {
-        if (strcmp(argv[3], "-hex") == 0) {
-            output = fopen(outputFile, "w");
+    logMessage(Normal, info, "[i] First pass\n");
+    if (assemble(0, source, 0, NULL) < 0) return -1;
+    logMessage(Debug, debug, "[Dbug] First pass complete\n");
+    
+    fseek(source, 0, SEEK_SET);
+
+    logMessage(Normal, info, "[i] Second pass\n");
+    int size = assemble(1, source, 0, list);
+    if (size < 0) return -1;
+    logMessage(Verbose, info, "[i] Assembling complete\n");
+    logMessage(Verbose, normal, "Assembled size: %i bytes\n", size);
+
+    fclose(source);
+    if (list != NULL) {
+        fclose(list);
+    }
+
+    if (outputFile == NULL) {
+        logMessage(Verbose, info, "[i] No output specified\n");
+        return 0;
+    }
+
+    output = fopen(outputFile, "w");
+    switch (fileType) {
+        case ihex:
             for (int i = 0; i < 1024; i += 16) {
                 fprintf(output, "%04x: ", i);
                 for (int n = 0; n < 16; n++) {
@@ -43,20 +145,75 @@ int main(int argc, char** argv) {
                 }
                 fprintf(output, "\n");
             }
-            fclose(output);
-            fclose(source);
-            printf("Outputfile is written\n");
-            return 0;
-        }
+            break;
+        case bin:
+            fwrite((void*) memory, sizeof(uint8_t), 1024, output);
+            break;
+        case hex:
+            for (int i = 0; i < 1024; i++) {
+                fprintf(output, "%02x", memory[i]);
+            }
+            break;
+        default:
+            logMessage(Normal, error, "This should never be reached! Congratulation you broke my code!\n");
+            break;
     }
-
-    output = fopen(outputFile, "wb");
-    fwrite((void*) memory, sizeof(uint8_t), 1024, output);
     fclose(output);
-    fclose(source);
-    printf("Outputfile is written\n");
 
     return 0;
+}
+
+void logMessage(int level, enum LogType type, const char* format, ...) {
+    if (level <= logLevel || (level >= -1 && type == error)) {
+        if (useColor != 0) {
+            switch (type) {
+                default:
+                case normal:
+                    printf("\x1b[0m"); //reset text to normal
+                    break;
+                case info:
+                    printf("\x1b[33m"); //set text to yellow
+                    break;
+                case debug:
+                    printf("\x1b[34m"); //set text to blue
+                    break;
+                case error:
+                    printf("\x1b[91m\x1b[1m"); //set text to bold red
+                    break;
+            }
+        }
+        va_list args;
+        va_start(args, format);
+        vprintf(format, args);
+        va_end(args);
+        if (useColor != 0) printf("\033[0m"); //reset color back to normal
+    }
+}
+
+void displayHelp() {
+    printf("Help:\n");
+    printf("This utility is used to assemble code for the PCU6.\n");
+    printf("Available commands are:\n");
+    printf("-i\t--input\t\tset input file\n");
+    printf("-o\t--output\tset output file\n");
+    printf("-l\t--listing\tset listing file\n");
+    printf("-ih\t--ihex\t\tset intel hex as output type\n");
+    printf("-b\t--bin\t\tset binary as output file\n");
+    printf("-h\t--hex\t\tset raw hex as output file\n");
+    printf("\t--help\t\tdisplay this message\n");
+    printf("-v\t--verbose\tdisplay verbose output\n");
+    printf("-d\t--debug\t\tdisplay debug information\n");
+    printf("-n\t--noColor\tdont use color for output\n");
+    printf("-s\t--silent\tdisplay no output except error output\n");
+    printf("-fs\t--forceSilent\tdisplay no output at all\n");
+    return;
+}
+
+int getIndex(char* str, char** tokenList, int listLen) {
+    for (int i = 0; i < listLen; i++) {
+        if (strcmp(str, tokenList[i]) == 0) return i;
+    }
+    return -1;
 }
 
 char* getToken(const char* str, int n) {
@@ -131,13 +288,13 @@ int handleDb(char *input_string, int index, unsigned char *memory) {
         return index;
     }
 
-    printf("%s\n", input_string);
+    logMessage(Debug, debug, "[Dbug] .db string: %s\n", input_string);
 
     // Tokenize the input string
     while (*input_string != '\0') {
         if (*input_string == '\"') {
             // The token is a string in quotes, so copy the substring between the quotes into the memory array
-            printf("start string\n");
+            logMessage(Debug, debug, "[Dbug] start of string\n");
             token_start = input_string + 1;
             char* start = token_start;
             while (42) {
@@ -153,7 +310,7 @@ int handleDb(char *input_string, int index, unsigned char *memory) {
                 for (int i = 0; i < string_length; i++) {
                     if (token_start[i] == '\\') {
                         // Handle escape sequences
-                        printf("escape sequence detected\n");
+                        logMessage(Debug, debug, "[Dbug] start of escape sequence\n");
                         switch (token_start[i+1]) {
                             case 'n': memory[index + added_length] = '\n'; break;
                             case 't': memory[index + added_length] = '\t'; break;
@@ -176,16 +333,14 @@ int handleDb(char *input_string, int index, unsigned char *memory) {
             }
         } else if (*input_string == ',') {
             // The token is a comma, so skip it
-            printf("token is comma\n");
             input_string++;
         } else {
             // The token is a number, so convert it to a byte and store it in the memory array
-            printf("token is number\n");
             char* new_string = NULL;
             memory[index + added_length] = (unsigned char) strtol(input_string, &new_string, 0);
             if (input_string == new_string) {
                 //that token could not be interpreted as a number
-                printf("Error, %s is not a valid number!", new_string);
+                logMessage(Normal, error, "Error, %s ist not a valid number!\n", new_string);
                 return -1;
             }
             input_string = new_string;
@@ -196,30 +351,53 @@ int handleDb(char *input_string, int index, unsigned char *memory) {
     return index + added_length;
 }
 
-int assemble(int pass) {
-    int adr = 0;
+int assemble(int pass, FILE* src, int startAdr, FILE* listing) {
+    int adr = startAdr;
     char *line = (char*) malloc(1024);
     size_t len;
     int lineCount = 0;
 
     while (42) {
-        if(getline(&line, &len, source) == -1) {
+        if(getline(&line, &len, src) == -1) {
             break;
         }
         lineCount++;
-        printf("Evaluating line %i\n", lineCount);
+        logMessage(Debug, debug, "[Dbug] Evaluating line %i\n", lineCount);
         char* token = getToken(line, 1);
         if (token == NULL) goto finished;
-        printf("%s\n", token);
+        if (token[0] == ';') {
+            if (listing != NULL && pass == 1) {
+                fprintf(listing, "%s", line);
+            }
+            goto finished;
+        }
+        if (len >= 2) {
+            if (token[0] == '/' && token[1] == '/') {
+                if (listing != NULL && pass == 1) {
+                    fprintf(listing, "%s", line);
+                }
+                goto finished;
+            }
+        }
 
         if (strcmp(token, ".equ") == 0) {
             //define a constant
-            printf("found a const definition\n");
+            logMessage(Debug, debug, "[Dbug] found a constant difinition\n");
+            if (listing != NULL) {
+                fprintf(listing, "%s", line);
+            }
             if (pass == 0) {
                 char* name = getToken(line, 2);
                 char* value = getToken(line, 3);
-                int v = strtol(value, NULL, 0);
-                printf("const name: %s\nconst value: %i\n", name, v);
+                int v;
+                if (value[0] == '\'') {
+                    //the constant is a char
+                    v = value[1];
+                } else {
+                    //the constant is a number
+                    v = strtol(value, NULL, 0);
+                }
+                logMessage(Debug, debug, "[Dbug] constant name: %s  constant value: %i\n", name, v);
 
                 if (constants == NULL) {
                     constants = (struct Constant*) malloc(sizeof(struct Constant));
@@ -244,24 +422,33 @@ int assemble(int pass) {
         }
         if (strcmp(token, ".org") == 0) {
             //define origin
-            printf("found origin\n");
             char* value = getToken(line, 2);
             int v = strtol(value, NULL, 0);
             adr = v;
+            logMessage(Debug, debug, "[Dbug] found .org. Origin at %i\n", adr);
+            if (listing != NULL && pass == 1) {
+                fprintf(listing, "%s", line);
+            }
             goto finished;
         }
         if (strcmp(token, ".db") == 0) {
-            adr = handleDb(line, adr, memory);
-            if (adr < 0) return -1;
+            int newAdr = handleDb(line, adr, memory);
+            if (newAdr < 0) return -1;
+            if (listing != 0 && pass == 1) {
+                fprintf(listing, "%s", line);
+                for (int i = adr; i < newAdr; i++) {
+                    fprintf(listing, "%02x ", memory[adr]);
+                }
+                fprintf(listing, "\n");
+            }
+            adr = newAdr;
             goto finished;
         }
 
         int length = 0;
         if (getLastChar(token, &length) == ':') {
             if (pass == 0) {
-                printf("this is a constant\n");
-                printf("name length is %i\n", length);
-                printf("value is %i\n", adr);
+                logMessage(Debug, debug, "[Dbug] found a label. Value is %i.\n", adr);
                 //this is a constant
                 if (constants == NULL) {
                     constants = (struct Constant*) malloc(sizeof(struct Constant));
@@ -282,20 +469,23 @@ int assemble(int pass) {
                     ptr->nextConst = NULL;
                 }
             }
+            if (listing != NULL) {
+                fprintf(listing, "%s", line);
+            }
             goto finished;
         }
 
         struct Instruction inst;
         for (int i = 0; i < 16; i++) {
             if (strcmp(token, OpcodeName[i]) == 0) {
-                printf("match found\n");
+                logMessage(Debug, debug, "[Dbug] found matching opcode\n");
                 //this line contains an opcode
 
                 if (pass == 0) {
                     adr += 2; //no need to assemble the instruction on first pass, just advance the address
                     if (adr > 1024) {
                         //oh oh, we ran out of space
-                        printf("Error, not enought memory to compile!\n");
+                        logMessage(Normal, error, "Error, not enough memory to assemble\n");
                         return -1;
                     }
                     goto finished;
@@ -311,61 +501,73 @@ int assemble(int pass) {
                         memory[adr] = op & 0x00ff;
                         memory[adr + 1] = (op >> 8) & 0x00ff;
 
+                        if (listing != NULL) {
+                            fprintf(listing, "%04x: %02x %02x  %s", adr, memory[adr], memory[adr + 1], line);
+                        }
+
                         adr += 2;
                         goto finished;
                     }
                     
                     char* src = getToken(line, 2);
-                    printf("source token: %s\n", src);
                     for (int n = 0; n < 8; n++) {
                         if (strcmp(src, SourceName[n]) == 0) {
                             //source found
-                            printf("matching source found\n");
+                            logMessage(Debug, debug, "[Dbug] matching source found\n");
 
                             inst.source = n;
                             char* imidiate = getToken(line, 3);
                             imidiate++;
                             imidiate[strlen(imidiate) - 1] = 0; //discard the first and last character
-                            printf("imidiate token: %s\n", imidiate);
                             int value = 0;
-                            if (!findConstant(imidiate, &value)) { //try to find constant with matching name
-                                value = strtol(imidiate, NULL, 0); //if that fails try to convert the string to a number
-                            }
-
-                            if (inst.opcode == JMP || inst.opcode == JCC) {
-                                inst.imidiate = (uint8_t) (value >> 1) - 1;
+                            if (imidiate[0] == '\'') {
+                                //imidiate value is a char
+                                value = imidiate[1];
                             } else {
-                                inst.imidiate = value;
+                                if (!findConstant(imidiate, &value)) { //try to find constant with matching name
+                                    value = strtol(imidiate, NULL, 0); //if that fails try to convert the string to a number
+                                }
                             }
+                            inst.imidiate = value;
 
-                            printf("imidiate value: %i\n", value);
+                            logMessage(Debug, debug, "[Dbug] imidiate value: %i\n", value);
 
+                            inst.BXI = 0;
                             char* bxi = getToken(line, 4);
                             if (bxi != NULL) {
                                 if (strcmp(bxi, "[BX]") == 0) {
+                                    logMessage(Debug, debug, "[Dbug] BX flag 1\n");
                                     inst.BXI = 1;
+                                } else {
+                                    logMessage(Debug, debug, "[Dbug] BX flag 0\n");
+                                    inst.BXI = 0;
                                 }
                             } else {
                                 inst.BXI = 0;
+                                logMessage(Debug, debug, "[Dbug] BX flag 0\n");
                             }
 
                             uint16_t op = toOpcode(inst);
                             memory[adr] = op & 0x00ff;
                             memory[adr + 1] = (op >> 8) & 0x00ff;
 
+                            if (listing != NULL) {
+                                fprintf(listing, "%04x: %02x %02x  %s", adr, memory[adr], memory[adr + 1], line);
+                            }
+
                             adr += 2;
                             goto finished;
                         }
                     }
-                    printf("Error on line %i! Source not found.\n", lineCount);
+                    logMessage(Normal, error, "Error on line %i! Source not recognised.\n", lineCount);
                     return -1;
                 }
             }
         }
 
-        printf("Error on line %i\n", lineCount);
+        logMessage(Normal, error, "Error on line %i\n", lineCount);
         return -1;
         finished:
     }
-    return 0;
+    return adr;
 }

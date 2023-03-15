@@ -1,0 +1,130 @@
+.equ SHIFT_IN 0xf0
+.equ SHIFT_RIGHT 0xf0
+.equ SHIFT_LEFT 0xf1
+
+.equ ZS 0x08
+.equ ZC 0x0a
+.equ SFS 0x20
+.equ SFC 0x30
+
+.org 0x00
+
+Start:
+//set parameters and clear Q
+ldx i (0x00) [I]
+ldm i (0x0a) [BX] //A High Byte
+inx
+ldm i (0x10) [BX] //A Low Byte
+inx
+ldm i (0x12) [BX] //B Highest Byte
+inx
+ldm i (0x34) [BX] //B MidHigh Byte
+inx
+ldm i (0x56) [BX] //B MidLow Byte
+inx
+ldm i (0x78) [BX] //B Low Byte
+inx
+ldm i (0x00) [BX] //Q High
+inx
+ldm i (0x00) [BX] //Q MidHigh
+inx
+ldm i (0x00) [BX] //Q MidLow
+inx
+ldm i (0x00) [BX] //Q Low
+
+jmp i (Multiply)
+
+Return:
+jmp i (Return)
+
+//parameters
+//mem(0 .. 1) A
+//mem(2 .. 5) B
+//mem(6 .. 9) Q
+Multiply:
+//--------------
+//Test if A is zero
+lda m (0x00) [I] //A High byte
+scf i (ZC)
+jcc i (Multiply_shiftA)
+lda m (0x01) [I] //A Low byte
+scf i (ZC)
+jcc i (Multiply_shiftA)
+jmp i (Return)
+Multiply_shiftA:
+//--------------
+//16 bit shift right
+lda m (0x00) [I] //A High Byte
+ldm a (SHIFT_IN) [I]
+scf i (0x00)
+lda m (SHIFT_RIGHT) [I]
+ldm a (0x00) [I] //A High Byte
+
+scf i (SFS)
+lda m (0x01) [I] //A Low byte
+ldm a (SHIFT_IN) [I]
+lda m (SHIFT_RIGHT) [I]
+ldm a (0x01) [I] //A Low Byte
+//--------------
+scf i (SFS)
+jcc i (Multiply_add)
+
+Multiply_shiftB:
+//--------------
+//32 bit shift left
+scf i (0x00) //clear c flag
+
+lda m (0x05) [I]
+ldm a (SHIFT_IN) [I]
+lda m (SHIFT_LEFT) [I]
+ldm a (0x05) [I]
+
+scf i (SFS)
+lda m (0x04) [I]
+ldm a (SHIFT_IN) [I]
+lda m (SHIFT_LEFT) [I]
+ldm a (0x04) [I]
+
+lda m (0x03) [I]
+ldm a (SHIFT_IN) [I]
+scf i (SFS)
+lda m (SHIFT_LEFT) [I]
+ldm a (0x03) [I]
+
+lda m (0x02) [I]
+ldm a (SHIFT_IN) [I]
+scf i (SFS)
+lda m (SHIFT_LEFT) [I]
+ldm a (0x02) [I]
+//--------------
+jmp i (Multiply)
+
+
+Multiply_add:
+//--------------
+//32 bit add
+cmp + (0x00) [I] //clear carry flag
+
+lda m (0x05) [I]
+ldb m (0x09) [I]
+lda + (0x00) [BX]
+ldm a (0x09) [I]
+
+lda m (0x04) [I]
+ldb m (0x08) [I]
+lda + (0x00) [BX]
+ldm a (0x08) [I]
+
+lda m (0x03) [I]
+ldb m (0x07) [I]
+lda + (0x00) [BX]
+ldm a (0x07) [I]
+
+lda m (0x02) [I]
+ldb m (0x06) [I]
+lda + (0x00) [BX]
+ldm a (0x06) [I]
+
+jmp i (Multiply_shiftB)
+//--------------
+

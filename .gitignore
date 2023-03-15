@@ -1,2 +1,5 @@
 m6asm/build
 m6asm/m6asm
+*.hex
+*.bin
+*.lst

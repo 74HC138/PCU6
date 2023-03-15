@@ -16,13 +16,13 @@ ldm i (0x0a) [BX] //A High Byte
 inx
 ldm i (0x10) [BX] //A Low Byte
 inx
-ldm i (0x12) [BX] //B Highest Byte
+ldm i (0x00) [BX] //B Highest Byte
 inx
-ldm i (0x34) [BX] //B MidHigh Byte
+ldm i (0x00) [BX] //B MidHigh Byte
 inx
-ldm i (0x56) [BX] //B MidLow Byte
+ldm i (0x12) [BX] //B MidLow Byte
 inx
-ldm i (0x78) [BX] //B Low Byte
+ldm i (0x34 ) [BX] //B Low Byte
 inx
 ldm i (0x00) [BX] //Q High
 inx

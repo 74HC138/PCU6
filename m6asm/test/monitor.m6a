@@ -1,0 +1,64 @@
+.equ SHIFT_IN 0xf0
+.equ SHIFT_RIGHT 0xf0
+.equ SHIFT_LEFT 0xf1
+.equ CON 0xff
+.equ MON_X 0xfe
+.equ MON_Y 0xfd
+.equ MON_D 0xfc
+
+.equ ZS 0x08
+.equ ZC 0x0a
+.equ SFS 0x20
+.equ SFC 0x30
+
+.equ XPOS 0x00
+.equ YPOS 0x01
+.equ CPOS 0x02
+
+.org 0x00
+Start:
+    lda i (0x00) [I]
+    ldm a (MON_X) [I]
+    ldm a (MON_Y) [I]
+    ldm a (XPOS) [I]
+    ldm a (YPOS) [I]
+    ldm a (CPOS) [I]
+    ldb a (0x00) [I]
+    ldx i (0xff) [I]
+
+LoopX:
+    //update MON_X and add one to XPOS
+    lda m (XPO) [I]
+    ldm a (MON_X) [I]
+    lda + (0x01) [I]
+    ldm a (XPOS) [I]
+    //store color to monitor an increment color value
+    lda b (0x00) [I]
+    ldm a (MON_D) [I]
+    ldb + (0x01) [I]
+    //decrement counter and loop
+    dex
+    scf i (ZC)
+    jcc i (LoopX)
+
+    //reset XPOS to zero
+    lda i (0x00) [I]
+    ldm a (XPOS) [I]
+    //load CPOS to b and increment
+    lda m (CPOS) [I]
+    lda + (0x01) [I]
+    ldm a (CPOS) [I]
+    ldb a (0x00) [I]
+    //increment YPOS and store
+    lda m (YPOS) [I]
+    lda + (0x01) [I]
+    ldm a (YPOS) [I]
+    ldm a (MON_Y) [I]
+    //reload counter
+    ldx i (0xff) [I]
+    //jump back to LoopX
+    jmp i (LoopX) [I]
+
+
+
+

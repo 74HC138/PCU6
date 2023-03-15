@@ -107,7 +107,7 @@
     <a name="appearance" val="logisim_evolution"/>
     <a name="circuit" val="main"/>
     <a name="circuitnamedboxfixedsize" val="true"/>
-    <a name="simulationFrequency" val="256.0"/>
+    <a name="simulationFrequency" val="2048000.0"/>
     <comp lib="0" loc="(1170,1620)" name="Splitter">
       <a name="appear" val="right"/>
       <a name="bit0" val="6"/>
@@ -499,26 +499,14 @@
       <a name="addrWidth" val="10"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="contents">addr/data: 10 8
-0 2 a 83 0 a 10 83
-0 a 12 83 0 a 34 83
-0 a 56 83 0 a 78 83
-0 a 0 83 0 a 0 83
-0 a 0 83 0 a 0 83
-15 4 14 4 0 70 a 7
-1c 5 1 70 a 7 1c 5
-14 4 0 70 f0 13 0 7
-f0 70 0 13 20 7 1 70
-f0 13 f0 70 1 13 20 7
-3d 5 0 7 5 70 f0 13
-f1 70 5 13 20 7 4 70
-f0 13 f1 70 4 13 3 70
-f0 13 20 7 f1 70 3 13
-2 70 f0 13 20 7 f1 70
-2 13 15 4 0 36 5 70
-9 71 0 b0 9 13 4 70
-8 71 0 b0 8 13 3 70
-7 71 0 b0 7 13 2 70
-6 71 0 b0 6 13 28 4
+0 0 fe 13 fd 13 0 13
+1 13 2 13 0 11 ff 2
+0 70 fe 13 1 30 0 13
+0 20 fc 13 1 31 0 b
+a 7 8 5 0 0 0 13
+2 70 1 30 2 13 0 11
+1 70 1 30 1 13 fd 13
+ff 2 8 4
 </a>
     </comp>
     <comp lib="4" loc="(270,180)" name="Counter">

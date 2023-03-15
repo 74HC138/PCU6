@@ -33,6 +33,8 @@ char* Command[] = {
     "--silent",
     "-fs",
     "--forceSilent",
+    "-I",
+    "--include",
     NULL
 };
 
@@ -128,6 +130,11 @@ enum LogLevel {
     Normal = 0,
     Verbose = 1,
     Debug = 2
+};
+
+struct IncludeList {
+    struct IncludeList* next;
+    char* path;
 };
 
 void logMessage(enum LogLevel level, enum LogType type, const char* format, ...);

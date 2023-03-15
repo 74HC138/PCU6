@@ -10,6 +10,7 @@ FILE* output;
 FILE* list;
 struct Constant* constants;
 enum FileType fileType;
+struct IncludeList* includeList = NULL;
 
 enum LogLevel logLevel = Normal;
 int useColor = 1;
@@ -88,6 +89,26 @@ int main(int argc, char** argv) {
             case 22:
                 logLevel = ForceSilent;
                 break;
+            case 23:
+            case 24:
+                i++;
+                if (i >= argc) {
+                    logMessage(Normal, error, "Parameter error!\n");
+                    return -1;
+                }
+                if (includeList == NULL) {
+                    includeList = (struct IncludeList*) malloc(sizeof(struct IncludeList));
+                    if (includeList == NULL) {
+                        logMessage(Normal, error, "Could not allocate space for includeList\n");
+                        return -1;
+                    }
+                }
+                struct IncludeList* ip = includeList;
+                while (ip->next != NULL) ip = ip->next;
+                ip->path = (char*) malloc(strlen(argv[i]) + 2); //allocate a little more memory to allow adding of a traling slash
+                strcpy(ip->path, argv[i]);
+                if (ip->path[strlen(ip->path) - 1] != '/') strcat(ip->path, "/");
+                break;
             default:
                 printf("Parameter error! Command %s not recognised.\n", argv[i]);
                 return -1;
@@ -163,6 +184,20 @@ int main(int argc, char** argv) {
     return 0;
 }
 
+char* getAbsoluteDirPath(char* path) {
+    char* directoryPath = strdup(path);
+    char* lastSlash = strrchr(directoryPath, '/');
+    if (lastSlash != NULL) *lastSlash = '\0';
+
+    char* absolutePath = realpath(directoryPath, NULL);
+    if (absolutePath == NULL) {
+        logMessage(Normal, error, "Error! Could not get absolute path of source file\n");
+        exit(-1);
+    }
+
+    return absolutePath;
+}
+
 void logMessage(int level, enum LogType type, const char* format, ...) {
     if (level <= logLevel || (level >= -1 && type == error)) {
         if (useColor != 0) {
@@ -206,6 +241,7 @@ void displayHelp() {
     printf("-n\t--noColor\tdont use color for output\n");
     printf("-s\t--silent\tdisplay no output except error output\n");
     printf("-fs\t--forceSilent\tdisplay no output at all\n");
+    printf("-I\t--include\tadd include path\n");
     return;
 }
 
@@ -528,6 +564,8 @@ int assemble(int pass, FILE* src, int startAdr, FILE* listing) {
                                     value = strtol(imidiate, NULL, 0); //if that fails try to convert the string to a number
                                 }
                             }
+                            if (inst.opcode == JMP || inst.opcode == JCC) value = value >> 1;
+
                             inst.imidiate = value;
 
                             logMessage(Debug, debug, "[Dbug] imidiate value: %i\n", value);

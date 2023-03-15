@@ -28,9 +28,9 @@ Start:
 0022: 00 83  ldm i (0x00) [BX] //Q MidLow
 0024: 00 0a  inx
 0026: 00 83  ldm i (0x00) [BX] //Q Low
-0028: 2c 04  jmp i (Multiply)
+0028: 16 04  jmp i (Multiply)
 Return:
-002a: 2a 04  jmp i (Return)
+002a: 15 04  jmp i (Return)
 //parameters
 //mem(0 .. 1) A
 //mem(2 .. 5) B
@@ -40,11 +40,11 @@ Multiply:
 //Test if A is zero
 002c: 00 70  lda m (0x00) [I] //A High byte
 002e: 0a 07  scf i (ZC)
-0030: 3a 05  jcc i (Multiply_shiftA)
+0030: 1d 05  jcc i (Multiply_shiftA)
 0032: 01 70  lda m (0x01) [I] //A Low byte
 0034: 0a 07  scf i (ZC)
-0036: 3a 05  jcc i (Multiply_shiftA)
-0038: 2a 04  jmp i (Return)
+0036: 1d 05  jcc i (Multiply_shiftA)
+0038: 15 04  jmp i (Return)
 Multiply_shiftA:
 //--------------
 //16 bit shift right
@@ -60,7 +60,7 @@ Multiply_shiftA:
 004c: 01 13  ldm a (0x01) [I] //A Low Byte
 //--------------
 004e: 20 07  scf i (SFS)
-0050: 7c 05  jcc i (Multiply_add)
+0050: 3e 05  jcc i (Multiply_add)
 Multiply_shiftB:
 //--------------
 //32 bit shift left
@@ -85,7 +85,7 @@ Multiply_shiftB:
 0076: f1 70  lda m (SHIFT_LEFT) [I]
 0078: 02 13  ldm a (0x02) [I]
 //--------------
-007a: 2c 04  jmp i (Multiply)
+007a: 16 04  jmp i (Multiply)
 Multiply_add:
 //--------------
 //32 bit add
@@ -106,5 +106,5 @@ Multiply_add:
 0098: 06 71  ldb m (0x06) [I]
 009a: 00 b0  lda + (0x00) [BX]
 009c: 06 13  ldm a (0x06) [I]
-009e: 52 04  jmp i (Multiply_shiftB)
+009e: 29 04  jmp i (Multiply_shiftB)
 //--------------
